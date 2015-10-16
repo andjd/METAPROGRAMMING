@@ -1,5 +1,6 @@
 require_relative 'db_connection'
 require 'active_support/inflector'
+#require 'byebug'
 # NB: the attr_accessor we wrote in phase 0 is NOT used in the rest
 # of this project. It was only a warm up.
 class SQLObject
@@ -18,7 +19,7 @@ class SQLObject
 
   def self.new_getter(col)
     define_method(col) do
-      @attributes[col]
+      attributes[col]
     end
   end
 
@@ -50,11 +51,11 @@ class SQLObject
     sql_out = DBConnection.execute(<<-SQL)
       SELECT #{name}.* FROM #{name}
     SQL
-    self.parse_all(sql_out)
+    out = self.parse_all(sql_out)
+    out ? out : nil
   end
 
   def self.parse_all(results)
-    return nil if results.length.zero?
     results.map do |params|
       self.new(params)
     end
@@ -64,19 +65,18 @@ class SQLObject
     sql_out = DBConnection.execute(<<-SQL, id)
       SELECT #{table_name}.* FROM #{table_name} WHERE id = ?
     SQL
-    out = self.parse_all(sql_out)
-    out.nil? ? nil : out.first
+    out = self.parse_all(sql_out).first
   end
 
   def initialize(params = {})
-    attrs = params.reduce(Hash.new) do |memo, pair|
-      atr, val = pair
+    @attributes = {}
+    attrs = params.each do |atr, val|
       unless self.class.columns.include?(atr.to_sym)
         raise ArgumentError.new "unknown attribute '#{atr}'"
       end
-      memo.merge (Hash[atr.to_sym, val])
+      self.send(atr.to_s + "=", val)
     end
-    @attributes = self.class.instance_variable_get(:@attributes).merge attrs
+
   end
 
   def attributes
@@ -84,11 +84,11 @@ class SQLObject
   end
 
   def attribute_values
-    @attributes.values
+    attributes.values
   end
 
   def insert
-    attrs_less_id = @attributes.keep_if { |key, _| key != :id}
+    attrs_less_id = attributes.keep_if { |key, _| key != :id}
     q_marks = (["?"] * attrs_less_id.length).join(", ")
 
     DBConnection.execute(<<-SQL, *attrs_less_id.values.map(&:to_s))
@@ -103,21 +103,18 @@ class SQLObject
   end
 
   def update
-    attrs_less_id = @attributes.keep_if { |key, _| key != :id}
+    attrs_less_id = attributes.keep_if { |key, _| key != :id}
     set_string = attrs_less_id.keys.join(" = ?, ") + " = ?"
-
+      #debugger
     DBConnection.execute(<<-SQL, *attrs_less_id.values.map(&:to_s), self.id)
       UPDATE #{self.class.table_name}
       SET #{set_string}
       WHERE id = ?
     SQL
 
-    self.attributes[:id] = DBConnection.last_insert_row_id
-
-    self
   end
 
   def save
-    # ...
+    self.id.nil? ? insert : update
   end
 end

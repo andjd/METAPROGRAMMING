@@ -1,6 +1,6 @@
 require_relative 'db_connection'
 require 'active_support/inflector'
-#require 'byebug'
+require 'byebug'
 # NB: the attr_accessor we wrote in phase 0 is NOT used in the rest
 # of this project. It was only a warm up.
 class SQLObject
@@ -13,7 +13,8 @@ class SQLObject
   def self.new_setter(col)
 
     define_method(col.to_s + "=") do |new_col_val|
-      @attributes.merge! Hash[col, new_col_val]
+      #attributes.merge! Hash[col, new_col_val]
+      attributes[col] = new_col_val
     end
   end
 
@@ -32,9 +33,9 @@ class SQLObject
       new_getter(col)
     end
 
-    define_method(:attributes) do
-      @attributes
-    end
+    # define_method(:attributes) do
+    #   @attributes
+    # end
     table_name = 'humans' if self.name == 'Human'
   end
 
@@ -103,7 +104,7 @@ class SQLObject
   end
 
   def update
-    attrs_less_id = attributes.keep_if { |key, _| key != :id}
+    attrs_less_id = attributes.select { |key, _| key != :id}
     set_string = attrs_less_id.keys.join(" = ?, ") + " = ?"
       #debugger
     DBConnection.execute(<<-SQL, *attrs_less_id.values.map(&:to_s), self.id)

@@ -1,6 +1,6 @@
 require_relative 'db_connection'
 require 'active_support/inflector'
-require 'byebug'
+
 # NB: the attr_accessor we wrote in phase 0 is NOT used in the rest
 # of this project. It was only a warm up.
 class SQLObject
@@ -106,7 +106,7 @@ class SQLObject
   def update
     attrs_less_id = attributes.select { |key, _| key != :id}
     set_string = attrs_less_id.keys.join(" = ?, ") + " = ?"
-      #debugger
+
     DBConnection.execute(<<-SQL, *attrs_less_id.values.map(&:to_s), self.id)
       UPDATE #{self.class.table_name}
       SET #{set_string}

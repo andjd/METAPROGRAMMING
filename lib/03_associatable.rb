@@ -6,27 +6,44 @@ class AssocOptions
   attr_accessor(
     :foreign_key,
     :class_name,
-    :primary_key
-  )
+    :primary_key)
+
 
   def model_class
-    # ...
+    class_name.constantize
   end
 
   def table_name
-    # ...
+    model_class.table_name
   end
 end
 
 class BelongsToOptions < AssocOptions
   def initialize(name, options = {})
-    # ...
+    relations = Hash[:foreign_key, (name.to_s + "_id").to_sym,
+      :primary_key, :id,
+      :class_name, "#{name.to_s.classify}"]
+
+    relations.merge! options
+    relations.each do |param, val|
+      instance_variable_set "@" + param.to_s, val
+    end
+
   end
 end
 
 class HasManyOptions < AssocOptions
   def initialize(name, self_class_name, options = {})
-    # ...
+    relations = (
+      Hash[:foreign_key, ((self_class_name.to_s + "Id").underscore).to_sym,
+      :primary_key, :id,
+      :class_name, "#{name.to_s.classify}"])
+
+    relations.merge! options
+    relations.each do |param, val|
+      instance_variable_set "@" + param.to_s, val
+    end
+
   end
 end
 

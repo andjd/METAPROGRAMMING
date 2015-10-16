@@ -1,15 +1,16 @@
 require_relative 'db_connection'
 require_relative '01_sql_object'
+require 'byebug'
 
 module Searchable
   def where(params)
     columns = params.keys
     values = params.values
-    where_string =
+    col_str = columns.map { |col| col.to_s + " = ?"}.join " AND "
     sql_out = DBConnection.execute(<<-SQL, *values)
       SELECT *
       FROM #{self.table_name}
-      WHERE #{columns.join(' = ? AND ')} = ?
+      WHERE #{col_str}
     SQL
 
     self.parse_all(sql_out)
